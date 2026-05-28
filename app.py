@@ -6,7 +6,7 @@ import folium as fm
 import streamlit_folium as st_fm
 import numpy as np
 from branca.colormap import linear
-import Path
+#import Path
 
 #Run this app with `streamlit run app.py` in the terminal
 
@@ -72,9 +72,9 @@ def highlight_fn(feature):
         "fillOpacity": 0.55,
     }
 
-st.write("CWD:", Path.cwd())
-st.write("Files in repo root:", list(Path(".").iterdir()))
-st.write("Data folder exists:", Path("data").exists())
+# st.write("CWD:", Path.cwd())
+# st.write("Files in repo root:", list(Path(".").iterdir()))
+# st.write("Data folder exists:", Path("data").exists())
 
 def load_districts():
     districts = gpd.read_parquet(r"./data/malaysia_districts_data.parquet")

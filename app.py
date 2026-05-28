@@ -72,15 +72,15 @@ def highlight_fn(feature):
     }
 
 def load_districts():
-    districts = gpd.read_parquet(".\\data\\malaysia_districts_data.parquet")
+    districts = gpd.read_parquet(r".\data\malaysia_districts_data.parquet")
     return districts
 
 def load_states():
-    states = gpd.read_parquet(".\\data\\malaysia_states_data.parquet")
+    states = gpd.read_parquet(r".\data\malaysia_states_data.parquet")
     return states
 
 def load_pv_data():
-    pv_df = pd.read_parquet(".\\data\\enriched_malaysia_pv_monthly.parquet")
+    pv_df = pd.read_parquet(r".\data\enriched_malaysia_pv_monthly.parquet")
     return pv_df
 
 @st.cache_data

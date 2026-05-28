@@ -6,9 +6,7 @@ import folium as fm
 import streamlit_folium as st_fm
 import numpy as np
 from branca.colormap import linear
-#import Path
-
-#Run this app with `streamlit run app.py` in the terminal
+from pathlib import Path
 
 
 APP_TITLE = "PV Potential in Malaysia"
@@ -27,7 +25,7 @@ padding: 10px;
 
 color: #333333;
 """
-
+BASE_DIR = Path(__file__).resolve().parent / "data"
 
 def get_colormap(df, column):
     """
@@ -72,21 +70,17 @@ def highlight_fn(feature):
         "fillOpacity": 0.55,
     }
 
-# st.write("CWD:", Path.cwd())
-# st.write("Files in repo root:", list(Path(".").iterdir()))
-# st.write("Data folder exists:", Path("data").exists())
 
 def load_districts():
-    districts = gpd.read_parquet(r"./data/malaysia_districts_data.parquet")
-    return districts
+    return gpd.read_parquet(BASE_DIR / "malaysia_districts_data.parquet")
+
 
 def load_states():
-    states = gpd.read_parquet(r"./data/malaysia_states_data.parquet")
-    return states
+    return gpd.read_parquet(BASE_DIR / "malaysia_states_data.parquet")
+
 
 def load_pv_data():
-    pv_df = pd.read_parquet(r"./data/enriched_malaysia_pv_monthly.parquet")
-    return pv_df
+    return pd.read_parquet(BASE_DIR / "enriched_malaysia_pv_monthly.parquet")
 
 @st.cache_data
 def load_data():

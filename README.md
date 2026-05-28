@@ -5,7 +5,7 @@ An interactive Streamlit dashboard for exploring solar photovoltaic (PV) potenti
 
 ## Running the App in Streamlit Community Cloud:
 
-Visit: 
+Visit: https://pv-potential-dashboard-amqkpmvgztmawtky2m4pri.streamlit.app/
 
 Please give a little time for the datasets to load when you first visit the website. 
 
@@ -54,7 +54,7 @@ Administrative boundary data was used for district-level aggregation and visuali
 If you would like to experiment with the application, clone the repository:
 
 ```bash
-git clone <your-repository-url>
+git clone https://github.com/GohNgeeJuay/pv-potential-dashboard.git
 cd pv-potential-dashboard
 ```
 

@@ -5,9 +5,9 @@ An interactive Streamlit dashboard for exploring solar photovoltaic (PV) potenti
 
 ## Running the App in Streamlit Community Cloud:
 
-Visit: https://pv-potential-dashboard-amqkpmvgztmawtky2m4pri.streamlit.app/
+Please visit [this website](https://pv-potential-dashboard-amqkpmvgztmawtky2m4pri.streamlit.app/) to view the interactive dashboard.
 
-Please give a little time for the datasets to load when you first visit the website. 
+Please give a some time for the datasets to load when you first visit the website. 
 
 ## Overview
 
@@ -41,17 +41,18 @@ The PV potential estimates were generated using ERA5-Land climate reanalysis dat
 
 Main variables used include:
 
-* Surface solar irradiance (`influx`)
-* Top-of-atmosphere irradiance (`influx_toa`)
+* Surface solar irradiance
+* Top-of-atmosphere irradiance 
 * Surface albedo
 * Solar altitude
 * Solar azimuth
+* Temperature
 
 Administrative boundary data was used for district-level aggregation and visualization.
 
 ## Running the App Locally
 
-If you would like to experiment with the application, clone the repository:
+If you would like to experiment with the application and make some changes, clone the repository:
 
 ```bash
 git clone https://github.com/GohNgeeJuay/pv-potential-dashboard.git

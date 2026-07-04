@@ -1,3 +1,4 @@
+from modulefinder import test
 from pyexpat import features
 import streamlit as st
 import pandas as pd
@@ -99,6 +100,7 @@ def load_data():
     pv_df['time'] = pv_df['time'].dt.date
     pv_df["num_days_in_month"] = pv_df["time"].apply(lambda x: pd.Period(x, freq='M').days_in_month)
 
+    pv_df["time"] = pd.to_datetime(pv_df["time"])
     return districts, states, pv_df
 
 
@@ -307,6 +309,31 @@ The project aims to make renewable energy data more accessible and easier to und
             
         """)
     
+    #To check if this is useful or not. otherwise we can remove it.
+    st.subheader("Total PV Potential by State")
+    st.text("This line chart displays the average Monthly PV potential across Malaysia by State (kWh per kWp installed). The PV potential is normalized by the area of the state.")
+
+    #Getting the total PV potential for each state by month.
+    state_pv = pv_df.groupby(["state_name", "time"])["pv"].sum().reset_index()
+    state_pv["Month"] = state_pv["time"].dt.strftime('%B')
+
+    #Calculate the average monthly PV potential for each state by averaging the total PV potential for each month across the years.
+    state_pv = state_pv.groupby(["state_name", "Month"])["pv"].mean().reset_index()
+
+    #Ordering the months and renaming
+    months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
+    state_pv["Month"] = pd.Categorical(state_pv["Month"], categories=months, ordered=True)
+    state_pv = state_pv.rename(columns={"state_name": "State", "pv":"PV Potential"})
+
+    #Get the number of unique cells for each state. Then use it to normalize the average PV potential for each state by dividing the total PV potential by the number of unique cells in that state
+    num_cells_per_state = pv_df[["state_name", "x", "y"]].drop_duplicates().groupby("state_name").size().reset_index(name="num_unique_cells").rename(columns={"state_name": "State"})
+    state_pv_normalized = state_pv.merge(num_cells_per_state, on="State", how="left")
+    state_pv_normalized["PV Potential Normalized"] = (state_pv_normalized["PV Potential"] / state_pv_normalized["num_unique_cells"]).round()
+
+    st.line_chart(state_pv_normalized, x="Month", y="PV Potential Normalized", color="State")
+
+    st.text("It seems like the middle part of the year shows the most consistent PV potential across the states. November seems to show a dip in PV potential, perhaps due to the Northeast monsoon.")
+
     st.divider()
     st.text("Below shows the PV potential for a specific year and month. Select the year, month and state from the dropdowns to explore the PV potential across different regions and time periods in Malaysia.")
 

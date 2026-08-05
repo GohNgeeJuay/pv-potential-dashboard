@@ -512,9 +512,10 @@ The project aims to make renewable energy data more accessible and easier to und
                 )
             )
             labels = (
-                base.mark_text(dx=5,align='left', fontWeight='bold')#dx=20, color="black")
+                base.mark_text(dx=5,align='left', fontWeight='bold')
                 .encode(
-                    text=alt.Text("percentage_label:N")#, format=".0f%%"),
+                    text=alt.Text("percentage_label:N")
+                    color=alt.value("black")
                 )
             )
             chart = base + labels

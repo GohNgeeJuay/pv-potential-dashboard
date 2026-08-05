@@ -49,6 +49,7 @@ Main variables used include:
 * Temperature
 
 Administrative boundary data was used for district-level aggregation and visualization.
+ESA WorldCover data is used for land cover data. 
 
 ## Running the App Locally
 

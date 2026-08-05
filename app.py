@@ -8,6 +8,8 @@ import streamlit_folium as st_fm
 import numpy as np
 from branca.colormap import linear
 from pathlib import Path
+import json
+import altair as alt
 
 
 APP_TITLE = "PV Potential in Malaysia"
@@ -75,19 +77,21 @@ def highlight_fn(feature):
 def load_districts():
     return gpd.read_parquet(BASE_DIR / "malaysia_districts_data.parquet")
 
-
 def load_states():
     return gpd.read_parquet(BASE_DIR / "malaysia_states_data.parquet")
 
-
 def load_pv_data():
     return pd.read_parquet(BASE_DIR / "enriched_malaysia_pv_monthly.parquet")
+
+def load_landcover_data():
+    return pd.read_parquet(BASE_DIR / "landcover_percentage.parquet")
 
 @st.cache_data
 def load_data():
     districts = load_districts()
     states = load_states()
     pv_df = load_pv_data()
+    landcover_data = load_landcover_data()
 
     pv_df = (
         pv_df
@@ -99,9 +103,10 @@ def load_data():
     pv_df['month'] = pv_df['time'].dt.strftime('%B')
     pv_df['time'] = pv_df['time'].dt.date
     pv_df["num_days_in_month"] = pv_df["time"].apply(lambda x: pd.Period(x, freq='M').days_in_month)
-
     pv_df["time"] = pd.to_datetime(pv_df["time"])
-    return districts, states, pv_df
+
+    landcover_data["landcover_percentage"] = landcover_data["landcover_percentage"].apply(json.loads)
+    return districts, states, pv_df, landcover_data
 
 
 def draw_map_district(districts_df, pv_df):
@@ -172,6 +177,8 @@ def draw_map_district(districts_df, pv_df):
         width=None, 
         height=600) #Width is set to None to make it responsive. 
 
+    return st_map
+
 
 def draw_map_cells(pv_df):
 
@@ -211,7 +218,9 @@ def draw_map_cells(pv_df):
             },
             "properties": {
                 "pv": float(pv),
-                "district_name": district_name
+                "district_name": district_name,
+                "lon": lon,
+                "lat": lat
             }
         })
 
@@ -247,17 +256,16 @@ def draw_map_cells(pv_df):
         m,
         width=None,
         height=600,
-        returned_objects=[]
+        returned_objects=["last_active_drawing"]
     )
-
-
+    return st_map
 
 
 def draw_map(districts_df, pv_df, level):
     if level == "district":
-        draw_map_district(districts_df, pv_df)
+        return draw_map_district(districts_df, pv_df)
     elif level == "cell":
-        draw_map_cells(pv_df)
+        return draw_map_cells(pv_df)
     else:
         raise ValueError("Invalid level. Choose either 'district' or 'cell'.")
       
@@ -269,6 +277,38 @@ def calculate_metrics(pv_df, columns, agg_func, new_col_names):
 
 
 
+def consolidate_landcover_class(landcover_df):
+    mapping = {
+        10: "Tree Cover",
+        20: "Sparse Vegetation",
+        30: "Sparse Vegetation",
+        40: "Crop Land",
+        50: "Built-up Area",
+        60: "Sparse Vegetation",
+        70: "Other",
+        80: "Water",
+        90: "Wetlands",
+        95: "Wetlands",
+        100: "Other"
+    }
+    #For each key in the landcover percentage dict, we will create a new column with the mapped category. 
+    # Then we will group by the new column and sum the landcover percentage for each category.
+    new_df = landcover_df.copy()
+    new_df["landcover_exploded"] = new_df["landcover_percentage"].apply(
+        lambda x: [
+            (mapping.get(int(k), "Other"), v)
+            for k, v in x.items()
+        ]
+    )
+    new_df = new_df.explode("landcover_exploded")
+    #Get the class and value from the tuples for each row and place it in their own columns
+    new_df["landcover_class"] = new_df["landcover_exploded"].apply(lambda x: x[0])
+    new_df["landcover_percentage"] = new_df["landcover_exploded"].apply(lambda x: x[1])
+    #Consolidate the classes by summing the landcover percentage for each class.
+    new_df = new_df.groupby(["lat", "lon", "landcover_class"])["landcover_percentage"].sum().reset_index()
+
+    return new_df
+
 def main():
 
     #Set page configuration
@@ -279,7 +319,7 @@ def main():
 
 
     #Load data
-    districts_df, states_df, pv_df = load_data()
+    districts_df, states_df, pv_df, landcover_df = load_data()
     
     st.text("""
 
@@ -405,8 +445,26 @@ The project aims to make renewable energy data more accessible and easier to und
 
     #Create the map. If state is "All", we will show the district level map. If a specific state is selected, we will show the cell level map for that state.
     map_condition = "district" if state == "All" else "cell"
+
+    #Both district and cell map will return some values, but only cell will be meaningful for now since the district map is static. 
+    map_return_vals = draw_map(districts_df, pv_filtered, map_condition)
+
+    #Only if the map is the cell and we have selected a cell, then filter
+    if map_condition == "cell" and map_return_vals["last_active_drawing"] is not None:
     
-    draw_map(districts_df, pv_filtered, map_condition)
+        properties = map_return_vals["last_active_drawing"]["properties"]
+        chosen_lat = properties["lat"]
+        chosen_lon = properties["lon"]
+
+        # Filter the landcover based on what cell the user selected. 
+        landcover_df_filtered = landcover_df.copy()
+        landcover_df_filtered = (
+            landcover_df_filtered[
+                (landcover_df_filtered["lat"] == chosen_lat) &
+                (landcover_df_filtered["lon"] == chosen_lon)
+            ]
+        )
+        
 
     #side bar with metrics and information about selected district. 
     with st.sidebar:
@@ -421,6 +479,48 @@ The project aims to make renewable energy data more accessible and easier to und
                          "Average Daily PV Potential (kWh)": st.column_config.Column("Average Daily PV Potential (kWh)", alignment="right")
                         }
         )  
+
+        #Display a landcover bar chart if user has selected a cell on the map.
+        if map_condition == 'cell' and map_return_vals["last_active_drawing"] is not None:
+            st.write("This section displays the landcover percentage for the selected cell.")
+            landcover_df_consolidated = consolidate_landcover_class(landcover_df_filtered)
+            
+            landcover_df_consolidated = landcover_df_consolidated.rename(columns={"landcover_class": "Landcover Class", "landcover_percentage": "Landcover Percentage"})
+            #Filter for non-zero values
+            landcover_df_consolidated = landcover_df_consolidated[landcover_df_consolidated["Landcover Percentage"] > 0]
+
+
+            base = (
+                alt.Chart(landcover_df_consolidated)
+                .transform_calculate(
+                    percentage_label="format(datum['Landcover Percentage'], '.2f') + '%'"
+                )
+                .mark_bar()
+                .encode(
+                    x="Landcover Percentage:Q",
+                    y=alt.Y(
+                        "Landcover Class:N",
+                        sort="-x"   # Sort descending by x value
+                    ),
+                    color=alt.Color("Landcover Class:N",
+                                    legend=None  # Remove the legend
+                    ),
+                    tooltip=[
+                        alt.Tooltip("Landcover Class:N", title="Landcover Class"),
+                        alt.Tooltip("Landcover Percentage:Q", title="Landcover Percentage", format=".2f")
+                    ]
+                )
+            )
+            labels = (
+                base.mark_text(dx=5,align='left', fontWeight='bold')#dx=20, color="black")
+                .encode(
+                    text=alt.Text("percentage_label:N")#, format=".0f%%"),
+                )
+            )
+            chart = base + labels
+            st.altair_chart(chart, width='stretch')
+
+
     st.header("Example insights")
     st.markdown("""
     

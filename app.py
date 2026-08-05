@@ -514,7 +514,7 @@ The project aims to make renewable energy data more accessible and easier to und
             labels = (
                 base.mark_text(dx=5,align='left', fontWeight='bold')
                 .encode(
-                    text=alt.Text("percentage_label:N")
+                    text=alt.Text("percentage_label:N"),
                     color=alt.value("black")
                 )
             )
